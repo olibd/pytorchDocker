@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -14,7 +13,9 @@
 #include <memory>
 #include <mutex>
 
+#ifdef __linux__
 #include "gloo/common/linux.h"
+#endif
 #include "gloo/common/logging.h"
 #include "gloo/cuda.h"
 #include "gloo/transport/device.h"
@@ -65,8 +66,12 @@ int findCudaDevicePointerClosestToDevice(
   int minDistance = INT_MAX;
   int minDistanceCount = 0;
   for (auto i = 0; i < ptrs.size(); i++) {
+#ifdef __linux__
     auto cudaBusID = getCudaPCIBusID(ptrs[i].getDeviceID());
     distance[i] = pciDistance(devBusID, cudaBusID);
+#else
+    distance[i] = 0;
+#endif
     if (distance[i] <= minDistance) {
       if (distance[i] < minDistance) {
         minDistance = distance[i];
@@ -121,13 +126,9 @@ class CudaMemory {
   CudaMemory(CudaMemory&&) noexcept;
   ~CudaMemory();
 
-  void set(int val, size_t stride = 0, cudaStream_t stream = kStreamNotSet);
-
   T* operator*() const {
     return ptr_;
   }
-
-  std::unique_ptr<T[]> copyToHost() const;
 
   const size_t elements;
   const size_t bytes;

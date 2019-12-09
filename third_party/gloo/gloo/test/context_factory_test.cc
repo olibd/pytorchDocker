@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include <functional>
@@ -34,29 +33,31 @@ TEST_P(ContextStoreTest, RunAlgo) {
   auto repeatCount = std::get<1>(GetParam());
   auto fn = std::get<2>(GetParam());
 
-  spawn(contextSize, [&](std::shared_ptr<Context> context) {
-      auto factory = std::make_shared<::gloo::rendezvous::ContextFactory>(
-        context);
-      for (int i = 0; i < repeatCount; ++i) {
-        auto usingContext = factory->makeContext(device_);
-        fn(usingContext);
-      }
-    });
+  spawn(Transport::TCP, contextSize, [&](std::shared_ptr<Context> context) {
+    auto factory =
+        std::make_shared<::gloo::rendezvous::ContextFactory>(context);
+    for (int i = 0; i < repeatCount; ++i) {
+      auto device = createDevice(Transport::TCP);
+      auto usingContext = factory->makeContext(device);
+      fn(usingContext);
+    }
+  });
 }
 
 static std::function<Func> barrierAllToAll =
-  [](std::shared_ptr<::gloo::Context> context) {
-  ::gloo::BarrierAllToAll algorithm(context);
-  algorithm.run();
-};
+    [](std::shared_ptr<::gloo::Context> context) {
+      ::gloo::BarrierAllToAll algorithm(context);
+      algorithm.run();
+    };
 
 INSTANTIATE_TEST_CASE_P(
-  BarrierAllToAll,
-  ContextStoreTest,
-  ::testing::Combine(
-    ::testing::Range(2, 4),
-    ::testing::Values(10),
-    ::testing::Values(barrierAllToAll)));
+    BarrierAllToAll,
+    ContextStoreTest,
+    ::testing::Combine(
+        ::testing::Range(2, 4),
+        ::testing::Values(10),
+        ::testing::Values(barrierAllToAll)));
+
 } // namespace
 } // namespace test
 } // namespace gloo

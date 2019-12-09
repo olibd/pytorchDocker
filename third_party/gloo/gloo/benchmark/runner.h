@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -99,7 +98,7 @@ class Runner {
   void run(BenchmarkFn<T>& fn);
 
   template <typename T>
-  void run(BenchmarkFn<T>& fn, int n);
+  void run(BenchmarkFn<T>& fn, size_t n);
 
  protected:
 #if GLOO_USE_REDIS
@@ -118,8 +117,8 @@ class Runner {
 
   void printHeader();
   void printDistribution(
-      int elements,
-      int elementSize,
+      size_t elements,
+      size_t elementSize,
       const Distribution& samples);
 
   options options_;

@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -66,6 +65,20 @@ class Pair : public ::gloo::transport::Pair {
 
   virtual std::unique_ptr<::gloo::transport::Buffer>
   createRecvBuffer(int slot, void* ptr, size_t size) override;
+
+  // Send from the specified buffer to remote side of pair.
+  virtual void send(
+      transport::UnboundBuffer* tbuf,
+      uint64_t tag,
+      size_t offset,
+      size_t nbytes) override;
+
+  // Receive into the specified buffer from the remote side of pair.
+  virtual void recv(
+      transport::UnboundBuffer* tbuf,
+      uint64_t tag,
+      size_t offset,
+      size_t nbytes) override;
 
   void handleCompletionEvent();
 

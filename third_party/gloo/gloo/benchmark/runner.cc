@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "runner.h"
@@ -29,11 +28,11 @@
 #include "gloo/mpi/context.h"
 #endif
 
-#if BENCHMARK_TCP
+#if GLOO_HAVE_TRANSPORT_TCP
 #include "gloo/transport/tcp/device.h"
 #endif
 
-#if BENCHMARK_IBVERBS
+#if GLOO_HAVE_TRANSPORT_IBVERBS
 #include "gloo/transport/ibverbs/device.h"
 #endif
 
@@ -41,7 +40,7 @@ namespace gloo {
 namespace benchmark {
 
 Runner::Runner(const options& options) : options_(options) {
-#ifdef BENCHMARK_TCP
+#if GLOO_HAVE_TRANSPORT_TCP
   if (options_.transport == "tcp") {
     if (options_.tcpDevice.empty()) {
       transport::tcp::attr attr;
@@ -55,7 +54,7 @@ Runner::Runner(const options& options) : options_(options) {
     }
   }
 #endif
-#ifdef BENCHMARK_IBVERBS
+#if GLOO_HAVE_TRANSPORT_IBVERBS
   if (options_.transport == "ibverbs") {
     if (options_.ibverbsDevice.empty()) {
       transport::ibverbs::attr attr;
@@ -211,7 +210,7 @@ void Runner::run(BenchmarkFn<T>& fn) {
 }
 
 template <typename T>
-void Runner::run(BenchmarkFn<T>& fn, int n) {
+void Runner::run(BenchmarkFn<T>& fn, size_t n) {
   std::vector<std::unique_ptr<Benchmark<T>>> benchmarks;
 
   // Initialize one set of objects for every thread
@@ -250,7 +249,8 @@ void Runner::run(BenchmarkFn<T>& fn, int n) {
     // Create warmup jobs for every thread
     std::vector<std::unique_ptr<RunnerJob>> jobs;
     for (auto i = 0; i < options_.threads; i++) {
-      auto fn = [&benchmark = benchmarks[i]] { benchmark->run(); };
+      auto& benchmark = benchmarks[i];
+      auto fn = [&benchmark] { benchmark->run(); };
       auto job = make_unique<RunnerJob>(fn, options_.warmupIterationCount);
       jobs.push_back(std::move(job));
     }
@@ -278,7 +278,8 @@ void Runner::run(BenchmarkFn<T>& fn, int n) {
   // Create jobs for every thread
   std::vector<std::unique_ptr<RunnerJob>> jobs;
   for (auto i = 0; i < options_.threads; i++) {
-    auto fn = [&benchmark = benchmarks[i]] { benchmark->run(); };
+    auto& benchmark = benchmarks[i];
+    auto fn = [&benchmark] { benchmark->run(); };
     auto job = make_unique<RunnerJob>(fn, iterations);
     jobs.push_back(std::move(job));
   }
@@ -357,8 +358,8 @@ void Runner::printHeader() {
 }
 
 void Runner::printDistribution(
-    int elements,
-    int elementSize,
+    size_t elements,
+    size_t elementSize,
     const Distribution& latency) {
   if (options_.contextRank != 0) {
     return;
@@ -389,11 +390,11 @@ void Runner::printDistribution(
 }
 
 template void Runner::run(BenchmarkFn<char>& fn);
-template void Runner::run(BenchmarkFn<char>& fn, int n);
+template void Runner::run(BenchmarkFn<char>& fn, size_t n);
 template void Runner::run(BenchmarkFn<float>& fn);
-template void Runner::run(BenchmarkFn<float>& fn, int n);
+template void Runner::run(BenchmarkFn<float>& fn, size_t n);
 template void Runner::run(BenchmarkFn<float16>& fn);
-template void Runner::run(BenchmarkFn<float16>& fn, int n);
+template void Runner::run(BenchmarkFn<float16>& fn, size_t n);
 
 RunnerThread::RunnerThread() : stop_(false), job_(nullptr) {
   thread_ = std::thread(&RunnerThread::spawn, this);

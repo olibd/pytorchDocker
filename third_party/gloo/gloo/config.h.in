@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -26,7 +25,14 @@ static_assert(
 
 #cmakedefine01 GLOO_USE_CUDA
 #cmakedefine01 GLOO_USE_NCCL
+#cmakedefine01 GLOO_USE_ROCM
+#cmakedefine01 GLOO_USE_RCCL
 #cmakedefine01 GLOO_USE_REDIS
 #cmakedefine01 GLOO_USE_IBVERBS
 #cmakedefine01 GLOO_USE_MPI
 #cmakedefine01 GLOO_USE_AVX
+#cmakedefine01 GLOO_USE_LIBUV
+
+#cmakedefine01 GLOO_HAVE_TRANSPORT_TCP
+#cmakedefine01 GLOO_HAVE_TRANSPORT_IBVERBS
+#cmakedefine01 GLOO_HAVE_TRANSPORT_UV

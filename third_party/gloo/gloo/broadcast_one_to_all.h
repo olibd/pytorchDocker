@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -24,7 +23,7 @@ class BroadcastOneToAll : public Algorithm {
   BroadcastOneToAll(
       const std::shared_ptr<Context>& context,
       const std::vector<T*>& ptrs,
-      int count,
+      size_t count,
       int rootRank = 0,
       int rootPointerRank = 0)
       : Algorithm(context),
@@ -113,8 +112,8 @@ class BroadcastOneToAll : public Algorithm {
   }
 
   std::vector<T*> ptrs_;
-  const int count_;
-  const int bytes_;
+  const size_t count_;
+  const size_t bytes_;
   const int rootRank_;
   const int rootPointerRank_;
 

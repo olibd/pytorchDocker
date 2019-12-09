@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/mpi/context.h"
@@ -87,22 +86,22 @@ Context::~Context() {
 }
 
 void Context::connectFullMesh(std::shared_ptr<transport::Device>& dev) {
-  std::vector<std::unique_ptr<transport::Pair>> pairs(size);
   std::vector<std::vector<char>> addresses(size);
   unsigned long maxLength = 0;
   int rv;
 
   // Create pair to connect to every other node in the collective
+  auto transportContext = dev->createContext(rank, size);
+  transportContext->setTimeout(getTimeout());
   for (int i = 0; i < size; i++) {
     if (i == rank) {
       continue;
     }
 
-    auto pair = dev->createPair(getTimeout());
-    pairs[i] = std::move(pair);
+    auto& pair = transportContext->createPair(i);
 
     // Store address for pair for this rank
-    auto address = pairs[i]->address().bytes();
+    auto address = pair->address().bytes();
     maxLength = std::max(maxLength, address.size());
     addresses[i] = std::move(address);
   }
@@ -142,11 +141,11 @@ void Context::connectFullMesh(std::shared_ptr<transport::Device>& dev) {
     auto offset = (rank + i * size) * maxLength;
     std::vector<char> address(maxLength);
     memcpy(address.data(), out.data() + offset, maxLength);
-    pairs[i]->connect(address);
+    transportContext->getPair(i)->connect(address);
   }
 
   device_ = dev;
-  pairs_ = std::move(pairs);
+  transportContext_ = std::move(transportContext);
 }
 
 } // namespace mpi

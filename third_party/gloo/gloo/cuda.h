@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -115,19 +114,6 @@ class CudaStream {
 };
 
 template<typename T>
-class BuilderHelpers {
-  public:
-    // Checks if all the pointers are GPU pointers.
-    static bool checkAllPointersGPU(std::vector<T*> inputs){
-      return std::all_of(inputs.begin(), inputs.end(), [](const T* ptr) {
-        cudaPointerAttributes attr;
-        auto rv = cudaPointerGetAttributes(&attr, ptr);
-        return rv == cudaSuccess && attr.memoryType == cudaMemoryTypeDevice;
-      });
-    }
-};
-
-template<typename T>
 class CudaDevicePointer {
  public:
   static CudaDevicePointer<T> alloc(size_t count);
@@ -203,6 +189,10 @@ template <typename T>
 class CudaHostPointer {
  public:
   static CudaHostPointer<T> alloc(size_t count);
+
+  static CudaHostPointer<T> create(T* ptr, size_t count) {
+    return CudaHostPointer<T>(ptr, count, false);
+  }
 
   CudaHostPointer(CudaHostPointer&&) noexcept;
   ~CudaHostPointer();

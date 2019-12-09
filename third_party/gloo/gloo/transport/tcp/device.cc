@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/transport/tcp/device.h"
@@ -22,6 +21,7 @@
 #include "gloo/common/linux.h"
 #include "gloo/common/logging.h"
 #include "gloo/common/error.h"
+#include "gloo/transport/tcp/context.h"
 #include "gloo/transport/tcp/pair.h"
 
 namespace gloo {
@@ -96,6 +96,9 @@ static void lookupAddrForHostname(struct attr& attr) {
   hints.ai_family = attr.ai_family;
   hints.ai_socktype = SOCK_STREAM;
   struct addrinfo* result;
+  int bind_rv = 0;
+  int bind_errno = 0;
+  std::string bind_addr;
   auto rv = getaddrinfo(attr.hostname.data(), nullptr, &hints, &result);
   GLOO_ENFORCE_NE(rv, -1);
   struct addrinfo* rp;
@@ -105,8 +108,10 @@ static void lookupAddrForHostname(struct attr& attr) {
       continue;
     }
 
-    rv = bind(fd, rp->ai_addr, rp->ai_addrlen);
-    if (rv == -1) {
+    bind_rv = bind(fd, rp->ai_addr, rp->ai_addrlen);
+    if (bind_rv == -1) {
+      bind_errno = errno;
+      bind_addr = Address(rp->ai_addr, rp->ai_addrlen).str();
       close(fd);
       continue;
     }
@@ -120,7 +125,17 @@ static void lookupAddrForHostname(struct attr& attr) {
     break;
   }
 
-  // Check that we found an address we were able to bind to
+  // If the final call to bind(2) failed, raise error saying so.
+  GLOO_ENFORCE(
+    bind_rv == 0,
+    "Unable to find address for ",
+    attr.hostname,
+    "; bind(2) for ",
+    bind_addr,
+    " failed with: ",
+    strerror(bind_errno));
+
+  // Verify that we were able to find an address in the first place.
   GLOO_ENFORCE(
     rp != nullptr,
     "Unable to find address for: ",
@@ -237,13 +252,10 @@ int Device::getInterfaceSpeed() const {
   return interfaceSpeedMbps_;
 }
 
-std::unique_ptr<transport::Pair> Device::createPair(
-    std::chrono::milliseconds timeout) {
-  if (timeout < std::chrono::milliseconds::zero()) {
-    GLOO_THROW_INVALID_OPERATION_EXCEPTION("Invalid timeout", timeout.count());
-  }
-  auto pair = new Pair(shared_from_this(), timeout);
-  return std::unique_ptr<transport::Pair>(pair);
+std::shared_ptr<transport::Context> Device::createContext(
+    int rank, int size) {
+  return std::shared_ptr<transport::Context>(
+      new tcp::Context(shared_from_this(), rank, size));
 }
 
 void Device::registerDescriptor(int fd, int events, Pair* p) {

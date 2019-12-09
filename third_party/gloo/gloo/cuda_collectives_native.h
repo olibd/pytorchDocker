@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -36,7 +35,7 @@ class CudaLocalNativeReduce : public LocalOp<T> {
         numPtrs_(devicePtrs.size()),
         steps_(log2(numPtrs_)) {
     // Only works with power-of-2 number of pointers
-    GLOO_ENFORCE(1 << steps_, streams.size(), "Not power of two");
+    GLOO_ENFORCE((1 << steps_) != 0, streams.size(), "Not power of two");
 
     // Incorporate offset/count into devicePtrs
     devicePtrs_.reserve(devicePtrs.size());
@@ -164,7 +163,7 @@ class CudaLocalNativeBroadcast : public LocalOp<T> {
         numPtrs_(devicePtrs.size()),
         steps_(log2(numPtrs_)) {
     // Only works with power-of-2 number of pointers
-    GLOO_ENFORCE(1 << steps_, streams.size(), "Not power of two");
+    GLOO_ENFORCE((1 << steps_) != 0, streams.size(), "Not power of two");
 
     // Incorporate offset/count into devicePtrs
     devicePtrs_.reserve(devicePtrs.size());

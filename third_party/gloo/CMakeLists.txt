@@ -13,10 +13,6 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "Gloo can only be built on 64-bit systems.")
 endif()
 
-# We want CMake to glob everything every time.
-execute_process(COMMAND
-  find "${PROJECT_SOURCE_DIR}" -name "CMakeLists.txt" -exec touch {} \;)
-
 # Local CMake modules
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
@@ -28,11 +24,15 @@ option(BUILD_BENCHMARK "Build benchmark binary (requires hiredis)" OFF)
 set(USE_REDIS_DEFAULT OFF)
 set(USE_IBVERBS_DEFAULT OFF)
 set(USE_NCCL_DEFAULT OFF)
+set(USE_RCCL_DEFAULT OFF)
+set(USE_LIBUV_DEFAULT OFF)
 
 # Options
 option(USE_REDIS "Support using Redis for rendezvous" ${USE_REDIS_DEFAULT})
 option(USE_IBVERBS "Support ibverbs transport" ${USE_IBVERBS_DEFAULT})
 option(USE_NCCL "Support using NCCL for local collectives" ${USE_NCCL_DEFAULT})
+option(USE_RCCL "Support using RCCL for local collectives" ${USE_RCCL_DEFAULT})
+option(USE_LIBUV "Build libuv transport" ${USE_LIBUV_DEFAULT})
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)

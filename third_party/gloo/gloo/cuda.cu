@@ -3,13 +3,30 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/cuda.h"
 #include "gloo/cuda_private.h"
+
+#include <cuda.h>
+// Disable strict aliasing errors for CUDA 9.
+#if CUDA_VERSION >= 9000
+#ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#pragma GCC diagnostic push
+#endif
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif // __GNUC__
+#endif // CUDA_VERSION >= 9000
 #include <cuda_fp16.h>
+#if CUDA_VERSION >= 9000
+#ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#pragma GCC diagnostic pop
+#endif
+#endif // __GNUC__
+#endif // CUDA_VERSION >= 9000
 
 namespace gloo {
 
@@ -28,10 +45,16 @@ CudaStream::CudaStream(int deviceId, cudaStream_t stream)
 
   // Create new stream if it wasn't specified
   if (stream_ == kStreamNotSet) {
+#ifndef __HIP_PLATFORM_HCC__
     int loPri, hiPri;
     CUDA_CHECK(cudaDeviceGetStreamPriorityRange(&loPri, &hiPri));
     CUDA_CHECK(cudaStreamCreateWithPriority(
                  &stream_, cudaStreamNonBlocking, hiPri));
+#else
+    // hipStreamCreateWithPriority is a new API introduced in ROCm 2.0
+    // it hangs on some distributed runs
+    CUDA_CHECK(cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking));
+#endif
     streamOwner_ = true;
   }
 
@@ -42,8 +65,8 @@ CudaStream::CudaStream(int deviceId, cudaStream_t stream)
 CudaStream::CudaStream(CudaStream&& other) noexcept
     : deviceId_(other.deviceId_),
       stream_(other.stream_),
-      streamOwner_(other.streamOwner_),
-      event_(other.event_) {
+      event_(other.event_),
+      streamOwner_(other.streamOwner_) {
   other.deviceId_ = kInvalidDeviceId;
   other.stream_ = nullptr;
   other.event_ = nullptr;

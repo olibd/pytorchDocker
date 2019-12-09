@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -59,8 +58,8 @@ class Device : public ::gloo::transport::Device,
 
   virtual int getInterfaceSpeed() const override;
 
-  virtual std::unique_ptr<::gloo::transport::Pair> createPair(
-      std::chrono::milliseconds timeout) override;
+  virtual std::shared_ptr<::gloo::transport::Context> createContext(
+      int rank, int size) override;
 
  protected:
   void loop();

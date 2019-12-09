@@ -153,17 +153,6 @@ endif()
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
 list(APPEND gloo_DEPENDENCY_LIBS ${CUDA_CUDART_LIBRARY})
 
-# Find libcuda.so and lbnvrtc.so
-# For libcuda.so, we will find it under lib, lib64, and then the
-# stubs folder, in case we are building on a system that does not
-# have cuda driver installed.
-find_library(CUDA_CUDA_LIB cuda
-    PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-    PATH_SUFFIXES lib lib64 lib/stubs lib64/stubs)
-find_library(CUDA_NVRTC_LIB nvrtc
-    PATHS ${CUDA_TOOLKIT_ROOT_DIR}
-    PATH_SUFFIXES lib lib64)
-
 # Setting nvcc arch flags (or inherit if already set)
 if (NOT ";${CUDA_NVCC_FLAGS};" MATCHES ";-gencode;")
   gloo_select_nvcc_arch_flags(NVCC_FLAGS_EXTRA)
@@ -171,32 +160,17 @@ if (NOT ";${CUDA_NVCC_FLAGS};" MATCHES ";-gencode;")
   message(STATUS "Added CUDA NVCC flags for: ${NVCC_FLAGS_EXTRA_readable}")
 endif()
 
-if(CUDA_CUDA_LIB)
-  message(STATUS "Found libcuda: ${CUDA_CUDA_LIB}")
-  list(APPEND gloo_DEPENDENCY_LIBS ${CUDA_CUDA_LIB})
-else()
-  message(FATAL_ERROR "Cannot find libcuda.so. Please file an issue on https://github.com/facebookincubator/gloo with your build output.")
-endif()
-
-if(CUDA_NVRTC_LIB)
-  message(STATUS "Found libnvrtc: ${CUDA_NVRTC_LIB}")
-  list(APPEND gloo_DEPENDENCY_LIBS ${CUDA_NVRTC_LIB})
-else()
-  message(FATAL_ERROR "Cannot find libnvrtc.so. Please file an issue on https://github.com/facebookincubator/gloo with your build output.")
-endif()
-
 # Disable some nvcc diagnostic that apears in boost, glog, glags, opencv, etc.
 foreach(diag cc_clobber_ignored integer_sign_change useless_using_declaration set_but_not_used)
   gloo_list_append_if_unique(CUDA_NVCC_FLAGS -Xcudafe --diag_suppress=${diag})
 endforeach()
 
-# Set C++11 support
+# If the project including us doesn't set any -std=xxx directly, we set it to C++11 here.
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-gloo_list_append_if_unique(CUDA_NVCC_FLAGS "-std=c++11")
+if((NOT "${CUDA_NVCC_FLAGS}" MATCHES "-std=c\\+\\+") AND (NOT "${CUDA_NVCC_FLAGS}" MATCHES "-std=gnu\\+\\+"))
+  gloo_list_append_if_unique(CUDA_NVCC_FLAGS "-std=c++11")
+endif()
 gloo_list_append_if_unique(CUDA_NVCC_FLAGS "-Xcompiler -fPIC")
-
-# Set :expt-relaxed-constexpr to suppress Eigen warnings
-gloo_list_append_if_unique(CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
 
 mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD)
 mark_as_advanced(CUDA_SDK_ROOT_DIR CUDA_SEPARABLE_COMPILATION)

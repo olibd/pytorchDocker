@@ -3,121 +3,117 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
-
-#if GLOO_USE_EIGEN
-// Eigen still uses the __CUDACC_VER__ macro,
-// which is deprecated in CUDA 9.
-#if __CUDACC_VER_MAJOR__ >= 9
-#undef __CUDACC_VER__
-#define __CUDACC_VER__ \
-  ((__CUDACC_VER_MAJOR__ * 10000) + (__CUDACC_VER_MINOR__ * 100))
-#endif
-#include <Eigen/Core>
-#endif
 
 #include "gloo/types.h"
 
 namespace gloo {
 
-#if GLOO_USE_EIGEN
+template <typename T>
+void sum(void* c_, const void* a_, const void* b_, size_t n) {
+  T* c = static_cast<T*>(c_);
+  const T* a = static_cast<const T*>(a_);
+  const T* b = static_cast<const T*>(b_);
+  for (auto i = 0; i < n; i++) {
+    c[i] = a[i] + b[i];
+  }
+}
 
 template <typename T>
-using EigenVectorArrayMap =
-  Eigen::Map<Eigen::Array<T, Eigen::Dynamic, 1> >;
-template <typename T>
-using ConstEigenVectorArrayMap =
-  Eigen::Map<const Eigen::Array<T, Eigen::Dynamic, 1> >;
+void sum(T* a, const T* b, size_t n) {
+  sum<T>(a, a, b, n);
+}
 
 template <typename T>
-void sum(T* x, const T* y, size_t n) {
-  EigenVectorArrayMap<T>(x, n) =
-    ConstEigenVectorArrayMap<T>(x, n) + ConstEigenVectorArrayMap<T>(y, n);
-};
+void product(void* c_, const void* a_, const void* b_, size_t n) {
+  T* c = static_cast<T*>(c_);
+  const T* a = static_cast<const T*>(a_);
+  const T* b = static_cast<const T*>(b_);
+  for (auto i = 0; i < n; i++) {
+    c[i] = a[i] * b[i];
+  }
+}
 
 template <typename T>
-void product(T* x, const T* y, size_t n) {
-  EigenVectorArrayMap<T>(x, n) =
-    ConstEigenVectorArrayMap<T>(x, n) * ConstEigenVectorArrayMap<T>(y, n);
-};
+void product(T* a, const T* b, size_t n) {
+  product<T>(a, a, b, n);
+}
 
 template <typename T>
-void min(T* x, const T* y, size_t n) {
-  EigenVectorArrayMap<T>(x, n) =
-    ConstEigenVectorArrayMap<T>(x, n).min(ConstEigenVectorArrayMap<T>(y, n));
-};
+void max(void* c_, const void* a_, const void* b_, size_t n) {
+  T* c = static_cast<T*>(c_);
+  const T* a = static_cast<const T*>(a_);
+  const T* b = static_cast<const T*>(b_);
+  for (auto i = 0; i < n; i++) {
+    c[i] = std::max(a[i], b[i]);
+  }
+}
 
 template <typename T>
-void max(T* x, const T* y, size_t n) {
-  EigenVectorArrayMap<T>(x, n) =
-    ConstEigenVectorArrayMap<T>(x, n).max(ConstEigenVectorArrayMap<T>(y, n));
-};
+void max(T* a, const T* b, size_t n) {
+  max<T>(a, a, b, n);
+}
 
+template <typename T>
+void min(void* c_, const void* a_, const void* b_, size_t n) {
+  T* c = static_cast<T*>(c_);
+  const T* a = static_cast<const T*>(a_);
+  const T* b = static_cast<const T*>(b_);
+  for (auto i = 0; i < n; i++) {
+    c[i] = std::min(a[i], b[i]);
+  }
+}
+
+template <typename T>
+void min(T* a, const T* b, size_t n) {
+  min<T>(a, a, b, n);
+}
+
+template <typename T>
+T roundUp(T value, T multiple) {
+  T remainder = value % multiple;
+  if (remainder == 0) {
+    return value;
+  }
+  return value + multiple - remainder;
+}
+
+inline uint32_t log2ceil(uint32_t value) {
+  uint32_t dim = 0;
+#if defined(__GNUC__)
+  if (value <= 1)
+    return 0;
+  dim = 32 - __builtin_clz(value - 1);
 #else
-
-template <typename T>
-void sum(T* x, const T* y, size_t n) {
-  for (auto i = 0; i < n; i++) {
-    x[i] = x[i] + y[i];
-  }
+  for (uint32_t size = 1; size < value; ++dim, size <<= 1)  /* empty */;
+#endif // defined(__GNUC__)
+  return dim;
 }
-
-template <typename T>
-void product(T* x, const T* y, size_t n) {
-  for (auto i = 0; i < n; i++) {
-    x[i] = x[i] * y[i];
-  }
-}
-
-template <typename T>
-void max(T* x, const T* y, size_t n) {
-  for (auto i = 0; i < n; i++) {
-    x[i] = std::max(x[i], y[i]);
-  }
-}
-
-template <typename T>
-void min(T* x, const T* y, size_t n) {
-  for (auto i = 0; i < n; i++) {
-    x[i] = std::min(x[i], y[i]);
-  }
-}
-
-#endif
 
 #if GLOO_USE_AVX
 
-// Assumes x and y are either both aligned to 32 bytes or unaligned by the same
-// offset, as would happen when reducing at an offset within an aligned buffer
 template <>
-void sum<float16>(float16* x, const float16* y, size_t n);
-extern template
-void sum<float16>(float16* x, const float16* y, size_t n);
+void sum<float16>(void* c, const void* a, const void* b, size_t n);
+extern template void
+sum<float16>(void* c, const void* a, const void* b, size_t n);
 
-// Assumes x and y are either both aligned to 32 bytes or unaligned by the same
-// offset, as would happen when reducing at an offset within an aligned buffer
 template <>
-void product<float16>(float16* x, const float16* y, size_t n);
-extern template
-void product<float16>(float16* x, const float16* y, size_t n);
+void product<float16>(void* c, const void* a, const void* b, size_t n);
+extern template void
+product<float16>(void* c, const void* a, const void* b, size_t n);
 
-// Assumes x and y are either both aligned to 32 bytes or unaligned by the same
-// offset, as would happen when reducing at an offset within an aligned buffer
 template <>
-void max<float16>(float16* x, const float16* y, size_t n);
-extern template
-void max<float16>(float16* x, const float16* y, size_t n);
+void max<float16>(void* c, const void* a, const void* b, size_t n);
+extern template void
+max<float16>(void* c, const void* a, const void* b, size_t n);
 
-// Assumes x and y are either both aligned to 32 bytes or unaligned by the same
-// offset, as would happen when reducing at an offset within an aligned buffer
 template <>
-void min<float16>(float16* x, const float16* y, size_t n);
-extern template
-void min<float16>(float16* x, const float16* y, size_t n);
+void min<float16>(void* c, const void* a, const void* b, size_t n);
+extern template void
+min<float16>(void* c, const void* a, const void* b, size_t n);
 
 #endif
 

@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -16,10 +15,18 @@
 #include <thread>
 #include <vector>
 
+#include "gloo/config.h"
 #include "gloo/rendezvous/context.h"
 #include "gloo/rendezvous/hash_store.h"
-#include "gloo/transport/tcp/device.h"
 #include "gloo/types.h"
+
+#if GLOO_HAVE_TRANSPORT_TCP
+#include "gloo/transport/tcp/device.h"
+#endif
+
+#if GLOO_HAVE_TRANSPORT_UV
+#include "gloo/transport/uv/device.h"
+#endif
 
 namespace gloo {
 namespace test {
@@ -45,12 +52,41 @@ class Barrier {
   std::condition_variable cv_;
 };
 
+enum Transport {
+  TCP,
+  UV,
+};
+
+// Transports that instantiated algorithms can be tested against.
+const std::vector<Transport> kTransportsForClassAlgorithms{
+    Transport::TCP,
+};
+
+// Transports that function algorithms can be tested against.
+// This is the new style of calling collectives and must be
+// preferred over the instantiated style.
+const std::vector<Transport> kTransportsForFunctionAlgorithms{
+    Transport::TCP,
+    Transport::UV,
+};
+
 class BaseTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {
-    device_ = ::gloo::transport::tcp::CreateDevice("localhost");
-    store_ = std::unique_ptr<::gloo::rendezvous::Store>(
-        new ::gloo::rendezvous::HashStore);
+  std::shared_ptr<::gloo::transport::Device> createDevice(
+      const Transport transport) {
+#if GLOO_HAVE_TRANSPORT_TCP
+    if (transport == Transport::TCP) {
+      static auto dev = ::gloo::transport::tcp::CreateDevice("localhost");
+      return dev;
+    }
+#endif
+#if GLOO_HAVE_TRANSPORT_UV
+    if (transport == Transport::UV) {
+      static auto dev = ::gloo::transport::uv::CreateDevice("localhost");
+      return dev;
+    }
+#endif
+    return std::shared_ptr<::gloo::transport::Device>();
   }
 
   void spawnThreads(int size, std::function<void(int)> fn) {
@@ -77,14 +113,31 @@ class BaseTest : public ::testing::Test {
     }
   }
 
-  void spawn(int size, std::function<void(std::shared_ptr<Context>)> fn) {
+  void spawn(
+      Transport transport,
+      int size,
+      std::function<void(std::shared_ptr<Context>)> fn,
+      int base = 2) {
     Barrier barrier(size);
+    ::gloo::rendezvous::HashStore store;
+
+    auto device = createDevice(transport);
+    if (!device) {
+      return;
+    }
+
     spawnThreads(size, [&](int rank) {
-      auto context = std::make_shared<::gloo::rendezvous::Context>(rank, size);
-      if (size > 1) {
-        context->connectFullMesh(*store_, device_);
+      auto context =
+          std::make_shared<::gloo::rendezvous::Context>(rank, size, base);
+      context->connectFullMesh(store, device);
+
+      try {
+        fn(context);
+      } catch (std::exception& e) {
+        // Unblock barrier and rethrow
+        barrier.wait();
+        throw;
       }
-      fn(context);
 
       // Since the test suite only deals with threads within a
       // process, we can cheat and use an in-process barrier to
@@ -101,9 +154,6 @@ class BaseTest : public ::testing::Test {
       }
     });
   }
-
-  std::shared_ptr<::gloo::transport::Device> device_;
-  std::unique_ptr<::gloo::rendezvous::Store> store_;
 };
 
 template <typename T>
@@ -128,6 +178,14 @@ class Fixture {
       auto val = (context->rank * srcs.size()) + i;
       for (auto j = 0; j < count; j++) {
         srcs[i][j] = (j * stride) + val;
+      }
+    }
+  }
+
+  void clear() {
+    for (auto i = 0; i < srcs.size(); i++) {
+      for (auto j = 0; j < count; j++) {
+        srcs[i][j] = 0;
       }
     }
   }
@@ -166,6 +224,10 @@ class Fixture {
             expected - srcs[i][j]);
       }
     }
+  }
+
+  T* getPointer() const {
+    return srcs.front().get();
   }
 
   std::vector<T*> getPointers() const {
@@ -216,8 +278,10 @@ class Fixture<float16> {
     }
   }
 
-  void
-  checkBroadcastResult(Fixture<float16>& fixture, int root, int rootPointer) {
+  void checkBroadcastResult(
+      Fixture<float16>& fixture,
+      int root,
+      int rootPointer) {
     // Expected is set to the expected value at ptr[0]
     const auto expected = root * fixture.srcs.size() + rootPointer;
     // Stride is difference between values at subsequent indices
@@ -327,8 +391,10 @@ class Fixture<float> {
     }
   }
 
-  void
-  checkBroadcastResult(Fixture<float>& fixture, int root, int rootPointer) {
+  void checkBroadcastResult(
+      Fixture<float>& fixture,
+      int root,
+      int rootPointer) {
     // Expected is set to the expected value at ptr[0]
     const auto expected = root * fixture.srcs.size() + rootPointer;
     // Stride is difference between values at subsequent indices

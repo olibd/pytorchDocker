@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/transport/ibverbs/pair.h"
@@ -325,6 +324,26 @@ Pair::createRecvBuffer(int slot, void* ptr, size_t size) {
   recvCompletionHandlers_[slot] = buffer;
   sendMemoryRegion(buffer->mr_, buffer->slot_);
   return std::unique_ptr<::gloo::transport::Buffer>(buffer);
+}
+
+// Send from the specified buffer to remote side of pair.
+void Pair::send(
+    transport::UnboundBuffer* tbuf,
+    uint64_t /* unused */,
+    size_t /* unused */,
+    size_t /* unused */) {
+  GLOO_THROW_INVALID_OPERATION_EXCEPTION(
+      "Unbound buffers not supported yet for ibverbs transport");
+}
+
+// Receive into the specified buffer from the remote side of pair.
+void Pair::recv(
+    transport::UnboundBuffer* tbuf,
+    uint64_t /* unused */,
+    size_t /* unused */,
+    size_t /* unused */) {
+  GLOO_THROW_INVALID_OPERATION_EXCEPTION(
+      "Unbound buffers not supported yet for ibverbs transport");
 }
 
 // handleCompletionEvent is called by the device thread when it

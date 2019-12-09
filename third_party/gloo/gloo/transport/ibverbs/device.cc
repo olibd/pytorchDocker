@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/transport/ibverbs/device.h"
@@ -19,6 +18,7 @@
 #include "gloo/common/error.h"
 #include "gloo/common/linux.h"
 #include "gloo/common/logging.h"
+#include "gloo/transport/ibverbs/context.h"
 #include "gloo/transport/ibverbs/pair.h"
 
 namespace gloo {
@@ -169,13 +169,10 @@ bool Device::hasGPUDirect() const {
   return hasNvPeerMem_;
 }
 
-std::unique_ptr<transport::Pair> Device::createPair(
-    std::chrono::milliseconds timeout) {
-  if (timeout < std::chrono::milliseconds::zero()) {
-    GLOO_THROW_INVALID_OPERATION_EXCEPTION("Invalid timeout", timeout.count());
-  }
-  auto pair = new Pair(shared_from_this(), timeout);
-  return std::unique_ptr<transport::Pair>(pair);
+std::shared_ptr<transport::Context> Device::createContext(
+    int rank, int size) {
+  return std::shared_ptr<transport::Context>(
+      new ibverbs::Context(shared_from_this(), rank, size));
 }
 
 void Device::loop() {

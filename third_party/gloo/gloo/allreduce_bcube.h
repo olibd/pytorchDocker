@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -57,7 +56,6 @@
  */
 namespace gloo {
 
-namespace allreduce {
 namespace bcube {
 
 /**
@@ -241,7 +239,6 @@ class Group {
 };
 
 } // namespace bcube
-} // namespace allreduce
 
 /**
  * This is another implemenation of allreduce algorithm where-in we divide
@@ -508,7 +505,7 @@ class AllreduceBcube : public Algorithm {
   /**
    * List of all the nodes
    */
-  std::vector<allreduce::bcube::Node> allNodes_;
+  std::vector<bcube::Node> allNodes_;
   /**
    * Compute number of steps required in reduce-scatter and all-gather (each)
    * @param nodes The total number of nodes
@@ -633,7 +630,7 @@ class AllreduceBcube : public Algorithm {
    * @param step The step for which we are updating the values
    * @param groups The group object with all peer, count and offset data
    */
-  void updateGroupNodes(int step, const allreduce::bcube::Group& group) {
+  void updateGroupNodes(int step, const bcube::Group& group) {
     const std::vector<int>& peers = group.getNodeRanks();
     const int peersSz = peers.size();
     int ptrOffset = group.getPtrOffset();
@@ -643,7 +640,7 @@ class AllreduceBcube : public Algorithm {
       count = 1;
     }
     for (int i = 0; i < peersSz; ++i) {
-      allreduce::bcube::Node& node = allNodes_[peers[i]];
+      bcube::Node& node = allNodes_[peers[i]];
       if (peersSz - 1 != i) { // if not the last node in group
         node.setPerStepAttributes(step, peers, count, ptrOffset);
         ptrOffset += count;
@@ -672,10 +669,10 @@ class AllreduceBcube : public Algorithm {
     // Now we actually try to set up the nodes
     int peerDistance = 1;
     for (int step = 0; step < steps_; ++step) {
-      std::vector<allreduce::bcube::Group> groups;
+      std::vector<bcube::Group> groups;
       // Iterate over all the nodes to identify the first node of each group
       for (int rank = 0; rank < nodes_; ++rank) {
-        const allreduce::bcube::Node& firstNode = allNodes_[rank];
+        const bcube::Node& firstNode = allNodes_[rank];
         // Only the ones with no peers would be first node
         if (0 == firstNode.getPeersPerStep(step).size()) {
           // Create a new group

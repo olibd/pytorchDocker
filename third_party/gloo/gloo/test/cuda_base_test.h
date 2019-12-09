@@ -3,15 +3,13 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
 
 #include "gloo/cuda_private.h"
 #include "gloo/test/base_test.h"
-
 
 namespace gloo {
 namespace test {
@@ -30,8 +28,7 @@ class CudaFixture : public Fixture<T> {
     for (int i = 0; i < ptrs; i++) {
       CudaDeviceScope scope(i % cudaNumDevices());
       cudaSrcs.push_back(CudaMemory<T>(count));
-      cudaPtrs.push_back(
-        CudaDevicePointer<T>::create(*cudaSrcs.back(), count));
+      cudaPtrs.push_back(CudaDevicePointer<T>::create(*cudaSrcs.back(), count));
       cudaStreams.push_back(CudaStream(i));
     }
   }
@@ -43,11 +40,11 @@ class CudaFixture : public Fixture<T> {
     for (auto i = 0; i < cudaSrcs.size(); i++) {
       CudaDeviceScope scope(cudaStreams[i].getDeviceID());
       CUDA_CHECK(cudaMemcpyAsync(
-        *cudaSrcs[i],
-        this->srcs[i].get(),
-        cudaSrcs[i].bytes,
-        cudaMemcpyHostToDevice,
-        *cudaStreams[i]));
+          *cudaSrcs[i],
+          this->srcs[i].get(),
+          cudaSrcs[i].bytes,
+          cudaMemcpyHostToDevice,
+          *cudaStreams[i]));
     }
     // Synchronize every stream to ensure the memory copies have completed.
     for (auto i = 0; i < cudaSrcs.size(); i++) {
@@ -69,11 +66,11 @@ class CudaFixture : public Fixture<T> {
       // synchronization errors.
       cudaSleep(*cudaStreams[i], 100000);
       CUDA_CHECK(cudaMemcpyAsync(
-        *cudaSrcs[i],
-        this->srcs[i].get(),
-        cudaSrcs[i].bytes,
-        cudaMemcpyHostToDevice,
-        *cudaStreams[i]));
+          *cudaSrcs[i],
+          this->srcs[i].get(),
+          cudaSrcs[i].bytes,
+          cudaMemcpyHostToDevice,
+          *cudaStreams[i]));
     }
   }
 
@@ -96,11 +93,11 @@ class CudaFixture : public Fixture<T> {
   void copyToHost() {
     for (auto i = 0; i < cudaSrcs.size(); i++) {
       CUDA_CHECK(cudaMemcpyAsync(
-        this->srcs[i].get(),
-        *cudaSrcs[i],
-        cudaSrcs[i].bytes,
-        cudaMemcpyDeviceToHost,
-        *cudaStreams[i]));
+          this->srcs[i].get(),
+          *cudaSrcs[i],
+          cudaSrcs[i].bytes,
+          cudaMemcpyDeviceToHost,
+          *cudaStreams[i]));
     }
     synchronizeCudaStreams();
   }

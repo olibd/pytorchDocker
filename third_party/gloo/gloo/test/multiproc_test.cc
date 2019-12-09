@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/test/multiproc_test.h"
@@ -12,8 +11,9 @@
 #include <fcntl.h>
 #include <ftw.h>
 
-#include <string>
+#include <array>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "gloo/common/error.h"
@@ -28,8 +28,7 @@ static std::string createTempDirectory() {
 }
 
 static int removeTree(const std::string& root) {
-  static auto fn = [](
-      const char* path, const struct stat*, int, struct FTW*) {
+  static auto fn = [](const char* path, const struct stat*, int, struct FTW*) {
     return remove(path);
   };
   return nftw(root.c_str(), fn, 20, FTW_DEPTH);
@@ -86,8 +85,7 @@ void MultiProcTest::signalProcess(int rank, int signal) {
   ASSERT_EQ(0, result);
 }
 
-void MultiProcTest::wait()
-{
+void MultiProcTest::wait() {
   for (auto i = 0; i < workers_.size(); i++) {
     waitProcess(i);
   }

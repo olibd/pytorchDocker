@@ -3,13 +3,32 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/cuda_private.h"
 
+#include <array>
+
+#include <cuda.h>
+
+// Disable strict aliasing errors for CUDA 9.
+#if CUDA_VERSION >= 9000
+#ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#pragma GCC diagnostic push
+#endif
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif // __GNUC__
+#endif // CUDA_VERSION >= 9000
 #include <cuda_fp16.h>
+#if CUDA_VERSION >= 9000
+#ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#pragma GCC diagnostic pop
+#endif
+#endif // __GNUC__
+#endif // CUDA_VERSION >= 9000
 
 #include "gloo/common/common.h"
 #include "gloo/types.h"
@@ -69,27 +88,6 @@ CudaMemory<T>::~CudaMemory() {
     std::lock_guard<std::mutex> lock(CudaShared::getMutex());
     CUDA_CHECK(cudaFree(ptr_));
   }
-}
-
-template<typename T>
-void CudaMemory<T>::set(int val, size_t stride, cudaStream_t stream) {
-  CudaDeviceScope scope(device_);
-  if (stream == kStreamNotSet) {
-    initializeMemory<T><<<1, 32>>>(ptr_, val, elements, stride);
-  } else {
-    initializeMemory<T><<<1, 32, 0, stream>>>(ptr_, val, elements, stride);
-  }
-}
-
-template<typename T>
-std::unique_ptr<T[]> CudaMemory<T>::copyToHost() const {
-  CudaDeviceScope scope(device_);
-  auto host = make_unique<T[]>(elements);
-  // Synchronize to ensure that the copy has completed.
-  // The caller needs to be able to use the result immediately.
-  CUDA_CHECK(cudaMemcpyAsync(host.get(), ptr_, bytes, cudaMemcpyDefault, 0));
-  CUDA_CHECK(cudaStreamSynchronize(0));
-  return host;
 }
 
 // Instantiate template

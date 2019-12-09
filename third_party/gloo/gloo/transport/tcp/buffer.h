@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #pragma once
@@ -40,9 +39,6 @@ class Buffer : public ::gloo::transport::Buffer {
   void handleRecvCompletion();
   void handleSendCompletion();
 
-  void signalError(const std::exception_ptr& ex);
-  void checkErrorState();
-
   Pair* pair_;
 
   std::mutex m_;
@@ -54,6 +50,12 @@ class Buffer : public ::gloo::transport::Buffer {
   std::atomic<int> sendPending_;
 
   std::exception_ptr ex_;
+
+  // Throws if an exception if set.
+  void throwIfException();
+
+  // Set exception and wake up any waitRecv/waitSend threads.
+  void signalException(std::exception_ptr);
 
   friend class Pair;
 };

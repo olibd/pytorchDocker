@@ -3,8 +3,7 @@
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "gloo/cuda_broadcast_one_to_all.h"
@@ -81,7 +80,12 @@ CudaBroadcastOneToAll<T, W>::CudaBroadcastOneToAll(
   // Setup local broadcast if needed
   if (devicePtrs_.size() > 1) {
     localBroadcastOp_ =
-      cudaDeviceBroadcast(streams_, devicePtrs_, devicePtrs_[0], 0, count_);
+      cudaDeviceBroadcast(
+          streams_,
+          devicePtrs_,
+          devicePtrs_[rootPointerRank],
+          0,
+          count_);
   }
 }
 
