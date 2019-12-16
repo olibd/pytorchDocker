@@ -17,12 +17,16 @@ RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-la
      ~/miniconda.sh -b -p /opt/conda && \
      rm ~/miniconda.sh && \
      /opt/conda/bin/conda install -y python=$PYTHON_VERSION numpy pyyaml scipy ipython mkl mkl-include ninja cython typing && \
-     /opt/conda/bin/conda install -y -c pytorch magma-cuda100 && \
      /opt/conda/bin/conda clean -ya
 ENV PATH /opt/conda/bin:$PATH
+
+RUN conda install https://storage.googleapis.com/olibdml-standarbucket/magma-cuda100-2.5.1-1.tar.bz2
+
 # This must be done before pip so that requirements.txt is available
 WORKDIR /opt/pytorch
 COPY . .
+
+RUN cmake --version
 
 RUN git submodule update --init --recursive
 RUN TORCH_CUDA_ARCH_LIST="3.5 5.2 6.0 6.1 7.0+PTX" TORCH_NVCC_FLAGS="-Xfatbin -compress-all" \
